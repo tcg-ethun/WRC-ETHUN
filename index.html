@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Withdraw Rate Calculator</title>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#f3f5fb;--card:#ffffff;--text:#1b2133;--muted:#6b7390;--border:#dde2f0;
+  --accent:#4f46e5;--accent-text:#ffffff;--ok:#0f9d58;--usd:#2563eb;--err:#d93025;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1220;--card:#1a1f33;--text:#eef0fa;--muted:#99a1c2;--border:#2d3452;
+    --accent:#7c75ff;--accent-text:#0f1220;--ok:#4cd68a;--usd:#6aa3ff;--err:#ff7b72;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1220;--card:#1a1f33;--text:#eef0fa;--muted:#99a1c2;--border:#2d3452;
+  --accent:#7c75ff;--accent-text:#0f1220;--ok:#4cd68a;--usd:#6aa3ff;--err:#ff7b72;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;background:var(--bg);color:var(--text);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Bengali",sans-serif;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.card{
+  width:100%;max-width:440px;background:var(--card);border:1px solid var(--border);
+  border-radius:20px;padding:26px 22px;box-shadow:0 8px 30px rgba(0,0,0,.08);
+}
+h1{font-size:1.35rem;margin:0 0 4px}
+p.sub{margin:0 0 16px;color:var(--muted);font-size:.9rem}
+.tabs{display:flex;gap:6px;background:var(--bg);padding:4px;border-radius:12px;margin-bottom:6px}
+.tab{
+  flex:1;margin:0;padding:10px;font-size:.88rem;font-weight:600;border:0;border-radius:9px;
+  background:transparent;color:var(--muted);cursor:pointer;
+}
+.tab.active{background:var(--accent);color:var(--accent-text)}
+label{display:block;font-size:.85rem;font-weight:600;margin:14px 0 6px}
+input{
+  width:100%;padding:13px 14px;font-size:1.05rem;border-radius:12px;
+  border:1px solid var(--border);background:var(--bg);color:var(--text);outline:none;
+}
+input:focus{border-color:var(--accent)}
+.go{
+  width:100%;margin-top:20px;padding:14px;font-size:1rem;font-weight:700;
+  border:0;border-radius:12px;background:var(--accent);color:var(--accent-text);cursor:pointer;
+}
+.go:active{transform:scale(.98)}
+.err{color:var(--err);font-size:.88rem;margin-top:12px;min-height:1em}
+.result{display:none;margin-top:20px;border-top:1px dashed var(--border);padding-top:16px}
+.row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;font-size:.92rem}
+.row span:first-child{color:var(--muted)}
+.row span:last-child{font-weight:600;text-align:right}
+.big{margin-top:12px;padding:14px;border-radius:14px;background:var(--bg);text-align:center}
+.big small{display:block;color:var(--muted);font-size:.8rem;margin-bottom:4px}
+.big strong{font-size:1.6rem}
+.big.bdt strong{color:var(--ok)}
+.big.usd strong{color:var(--usd)}
+.big.wpa strong{color:var(--accent)}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Withdraw Rate Calculator</h1>
+  <p class="sub">Point &harr; Dollar &harr; BDT (1.5% deduction)</p>
+
+  <div class="tabs">
+    <button class="tab active" id="tabF" type="button">WPA &rarr; BDT</button>
+    <button class="tab" id="tabR" type="button">BDT &rarr; WPA</button>
+  </div>
+
+  <div id="fwd">
+    <label for="wpa">Withdraw Point Amount (WPA)</label>
+    <input id="wpa" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 100000">
+  </div>
+  <div id="rev" class="hidden">
+    <label for="bdtIn">Taka Amount (BDT)</label>
+    <input id="bdtIn" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 1230">
+  </div>
+
+  <label for="rate">Dollar Rate (BDT)</label>
+  <input id="rate" type="number" inputmode="decimal" min="0" step="any" value="125">
+
+  <button class="go" id="calc" type="button">Calculate</button>
+  <div class="err" id="err"></div>
+
+  <div class="result" id="result">
+    <div id="resF">
+      <div class="row"><span>Deducted points (1.5%)</span><span id="dPts"></span></div>
+      <div class="row"><span>Points after deduction</span><span id="after"></span></div>
+      <div class="big usd"><small>Dollar (USD)</small><strong id="usd"></strong></div>
+      <div class="big bdt"><small>Final amount (BDT)</small><strong id="bdt"></strong></div>
+    </div>
+    <div id="resR" class="hidden">
+      <div class="row"><span>Dollar (USD)</span><span id="rUsd"></span></div>
+      <div class="row"><span>Points after deduction</span><span id="rAfter"></span></div>
+      <div class="row"><span>Deducted points (1.5%)</span><span id="rDed"></span></div>
+      <div class="big wpa"><small>Withdraw Point Amount (WPA)</small><strong id="rWpa"></strong></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var FEE = 0.015;
+  var mode = 'fwd';
+
+  function fmt(n, d){
+    return n.toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
+  }
+
+  function setMode(m){
+    mode = m;
+    $('tabF').classList.toggle('active', m === 'fwd');
+    $('tabR').classList.toggle('active', m === 'rev');
+    $('fwd').classList.toggle('hidden', m !== 'fwd');
+    $('rev').classList.toggle('hidden', m !== 'rev');
+    $('result').style.display = 'none';
+    $('err').textContent = '';
+  }
+
+  function calculate(){
+    var rate = parseFloat($('rate').value);
+    var err = $('err'), res = $('result');
+    err.textContent = '';
+
+    if (isNaN(rate) || rate <= 0){
+      res.style.display = 'none';
+      err.textContent = 'Valid dollar rate din.';
+      return;
+    }
+
+    if (mode === 'fwd'){
+      var wpa = parseFloat($('wpa').value);
+      if (isNaN(wpa) || wpa <= 0){
+        res.style.display = 'none';
+        err.textContent = 'Valid WPA din.';
+        return;
+      }
+      var deducted = wpa * FEE;
+      var afterDeduct = wpa - deducted;
+      var usd = afterDeduct / 10000;
+      var bdt = usd * rate;
+
+      $('dPts').textContent = fmt(deducted, 2);
+      $('after').textContent = fmt(afterDeduct, 2);
+      $('usd').textContent = '$' + fmt(usd, 2);
+      $('bdt').textContent = fmt(Math.round(bdt), 0) + ' \u09F3';
+      $('resF').classList.remove('hidden');
+      $('resR').classList.add('hidden');
+    } else {
+      var tk = parseFloat($('bdtIn').value);
+      if (isNaN(tk) || tk <= 0){
+        res.style.display = 'none';
+        err.textContent = 'Valid taka amount din.';
+        return;
+      }
+      var usdR = tk / rate;
+      var afterR = usdR * 10000;
+      var wpaR = afterR / (1 - FEE);
+      var dedR = wpaR - afterR;
+
+      $('rUsd').textContent = '$' + fmt(usdR, 2);
+      $('rAfter').textContent = fmt(afterR, 2);
+      $('rDed').textContent = fmt(dedR, 2);
+      $('rWpa').textContent = fmt(Math.round(wpaR), 0);
+      $('resR').classList.remove('hidden');
+      $('resF').classList.add('hidden');
+    }
+    res.style.display = 'block';
+  }
+
+  $('tabF').addEventListener('click', function(){ setMode('fwd'); });
+  $('tabR').addEventListener('click', function(){ setMode('rev'); });
+  $('calc').addEventListener('click', calculate);
+  ['wpa','bdtIn','rate'].forEach(function(id){
+    $(id).addEventListener('keydown', function(e){ if (e.key === 'Enter') calculate(); });
+  });
+})();
+</script>
+</body>
+</html>
