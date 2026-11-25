@@ -3,208 +3,529 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#E8E9F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1220" media="(prefers-color-scheme: dark)">
 <title>Withdraw Rate Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  box-sizing:border-box;
-  padding-top:env(safe-area-inset-top,0px);
-  padding-bottom:env(safe-area-inset-bottom,0px);
-  --bg:#f3f5fb;--card:#ffffff;--text:#1b2133;--muted:#6b7390;--border:#dde2f0;
-  --accent:#4f46e5;--accent-text:#ffffff;--ok:#0f9d58;--usd:#2563eb;--err:#d93025;
+  color-scheme:light;
+  --bg:#E8E9F7;--ink:#14162B;--muted:#62668A;
+  --glass:rgba(255,255,255,.68);--edge:rgba(255,255,255,.85);--line:rgba(20,22,43,.12);
+  --field:rgba(255,255,255,.6);--accent:#5B50F0;--on-accent:#FFFFFF;--on-hi:rgba(255,255,255,.4);
+  --fee:#D6334F;--ring:rgba(91,80,240,.3);
+  --orb1:rgba(91,80,240,.30);--orb2:rgba(60,150,255,.24);--orb3:rgba(255,120,200,.16);
+  --sheen:rgba(255,255,255,.55);
+  --shadow:0 24px 50px -24px rgba(20,22,43,.35);
+  --out:cubic-bezier(.22,1,.36,1);
+  --font:"Poppins",system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Bengali",sans-serif;
 }
-@media (prefers-color-scheme: dark){
+@media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --bg:#0f1220;--card:#1a1f33;--text:#eef0fa;--muted:#99a1c2;--border:#2d3452;
-    --accent:#7c75ff;--accent-text:#0f1220;--ok:#4cd68a;--usd:#6aa3ff;--err:#ff7b72;
+    color-scheme:dark;
+    --bg:#0F1220;--ink:#F2F3FA;--muted:#8C90B0;
+    --glass:rgba(30,34,60,.74);--edge:rgba(255,255,255,.12);--line:rgba(255,255,255,.12);
+    --field:rgba(9,11,22,.55);--accent:#7A72FF;--on-accent:#0F1120;--on-hi:rgba(255,255,255,.45);
+    --fee:#FF9BAA;--ring:rgba(122,114,255,.38);
+    --orb1:rgba(122,114,255,.38);--orb2:rgba(70,140,255,.24);--orb3:rgba(255,110,190,.14);
+    --sheen:rgba(255,255,255,.10);
+    --shadow:0 24px 50px -24px rgba(0,0,0,.8);
   }
 }
 :root[data-theme="dark"]{
-  --bg:#0f1220;--card:#1a1f33;--text:#eef0fa;--muted:#99a1c2;--border:#2d3452;
-  --accent:#7c75ff;--accent-text:#0f1220;--ok:#4cd68a;--usd:#6aa3ff;--err:#ff7b72;
+  color-scheme:dark;
+  --bg:#0F1220;--ink:#F2F3FA;--muted:#8C90B0;
+  --glass:rgba(30,34,60,.74);--edge:rgba(255,255,255,.12);--line:rgba(255,255,255,.12);
+  --field:rgba(9,11,22,.55);--accent:#7A72FF;--on-accent:#0F1120;--on-hi:rgba(255,255,255,.45);
+  --fee:#FF9BAA;--ring:rgba(122,114,255,.38);
+  --orb1:rgba(122,114,255,.38);--orb2:rgba(70,140,255,.24);--orb3:rgba(255,110,190,.14);
+  --sheen:rgba(255,255,255,.10);
+  --shadow:0 24px 50px -24px rgba(0,0,0,.8);
 }
-html{scroll-padding-top:env(safe-area-inset-top,0px);touch-action:pan-x pan-y;-webkit-text-size-adjust:100%}
+
+/* ---------- Scroll fully off ---------- */
+html,body{
+  height:100%;margin:0;overflow:hidden;overscroll-behavior:none;
+  touch-action:none;-webkit-text-size-adjust:100%;
+}
 *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 input{-webkit-user-select:text;user-select:text}
-button{touch-action:manipulation}
+button{touch-action:manipulation;font-family:inherit}
+
+/* ---------- Typography base ---------- */
 body{
-  margin:0;min-height:100vh;background:var(--bg);color:var(--text);
-  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Bengali",sans-serif;
-  display:flex;align-items:center;justify-content:center;padding:20px;
+  background:var(--bg);color:var(--ink);
+  font-family:var(--font);font-size:16px;line-height:1.5;
+  font-kerning:normal;font-synthesis:none;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
 }
+.hidden{display:none!important}
+
+/* ---------- Stage: card is always dead-center, never scrolls ---------- */
+.stage{
+  position:fixed;left:0;right:0;top:0;height:100dvh;z-index:1;overflow:hidden;
+  display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);
+  justify-items:center;align-items:center;
+  padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(14px + env(safe-area-inset-bottom,0px));
+}
+.fit{width:min(100%,420px);transition:transform .35s var(--out)}
+
+/* ---------- Backdrop: static orbs (no continuous animation) ---------- */
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.orb{position:absolute;border-radius:50%}
+.o1{width:520px;height:520px;top:-160px;left:-180px;background:radial-gradient(circle,var(--orb1),transparent 68%)}
+.o2{width:560px;height:560px;bottom:-220px;right:-200px;background:radial-gradient(circle,var(--orb2),transparent 68%)}
+
+/* ---------- Glass card ---------- */
 .card{
-  width:100%;max-width:440px;background:var(--card);border:1px solid var(--border);
-  border-radius:20px;padding:26px 22px;box-shadow:0 8px 30px rgba(0,0,0,.08);
+  position:relative;width:100%;padding:24px 22px 22px;
+  background:var(--glass);border:1px solid var(--edge);border-radius:26px;
+  box-shadow:var(--shadow),inset 0 1px 0 var(--edge);
+  animation:enter .5s var(--out) backwards;
 }
-h1{font-size:1.35rem;margin:0 0 4px}
-p.sub{margin:0 0 16px;color:var(--muted);font-size:.9rem}
-.tabs{display:flex;gap:6px;background:var(--bg);padding:4px;border-radius:12px;margin-bottom:6px}
-.tab{
-  flex:1;margin:0;padding:10px;font-size:.88rem;font-weight:600;border:0;border-radius:9px;
-  background:transparent;color:var(--muted);cursor:pointer;
+@keyframes enter{from{opacity:0;transform:translate3d(0,14px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+/* light staggered entrance (plays once, then releases the GPU layers) */
+.card > *{animation:intro .45s var(--out) backwards;animation-delay:calc(var(--i,0) * 35ms + 60ms)}
+.card > :nth-child(2){--i:1}.card > :nth-child(3){--i:2}.card > :nth-child(4){--i:3}
+.card > :nth-child(5){--i:4}.card > :nth-child(6){--i:5}.card > :nth-child(7){--i:6}
+.card > :nth-child(8){--i:7}.card > :nth-child(9){--i:8}
+@keyframes intro{
+  from{opacity:0;transform:translate3d(0,10px,0)}
+  to{opacity:1;transform:translate3d(0,0,0)}
 }
-.tab.active{background:var(--accent);color:var(--accent-text)}
-label{display:block;font-size:.85rem;font-weight:600;margin:14px 0 6px}
-input{
-  width:100%;padding:13px 14px;font-size:1.05rem;border-radius:12px;
-  border:1px solid var(--border);background:var(--bg);color:var(--text);outline:none;
+
+/* ---------- Type scale ---------- */
+h1{
+  margin:0 0 10px;font-size:clamp(1.25rem,5.2vw,1.4rem);line-height:1.25;
+  font-weight:700;letter-spacing:-.022em;text-wrap:balance;
 }
-input:focus{border-color:var(--accent)}
-.go{
-  width:100%;margin-top:20px;padding:14px;font-size:1rem;font-weight:700;
-  border:0;border-radius:12px;background:var(--accent);color:var(--accent-text);cursor:pointer;
+
+/* ---------- Route line ---------- */
+.route{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;color:var(--muted);font-size:.875rem;line-height:1.4;font-weight:500}
+.ic{width:1.1em;height:1.1em;flex:none;color:var(--accent)}
+.chip{padding:2px 9px;border:1px solid var(--line);border-radius:8px;color:var(--fee);font-size:.75rem;font-weight:600;letter-spacing:.01em}
+
+/* ---------- Direction switch ---------- */
+.seg{
+  position:relative;display:grid;grid-template-columns:1fr 1fr;padding:4px;margin:20px 0 2px;
+  background:var(--field);border:1px solid var(--line);border-radius:16px;
 }
-.go:active{transform:scale(.98)}
-.err{color:var(--err);font-size:.88rem;margin-top:12px;min-height:1em}
-.result{display:none;margin-top:20px;border-top:1px dashed var(--border);padding-top:16px}
-.row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;font-size:.92rem}
-.row span:first-child{color:var(--muted)}
-.row span:last-child{font-weight:600;text-align:right}
-.big{margin-top:12px;padding:14px;border-radius:14px;background:var(--bg);text-align:center}
-.big small{display:block;color:var(--muted);font-size:.8rem;margin-bottom:4px}
-.big strong{font-size:1.6rem}
-.big.bdt strong{color:var(--ok)}
-.big.usd strong{color:var(--usd)}
-.big.wpa strong{color:var(--accent)}
-.hidden{display:none}
+.seg::before{
+  content:"";position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);
+  background:var(--accent);border-radius:12px;box-shadow:0 6px 18px -6px var(--ring);
+  transition:transform .35s var(--out);will-change:transform;
+}
+.seg[data-mode="rev"]::before{transform:translate3d(100%,0,0)}
+.seg button{
+  position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 8px;border:0;border-radius:12px;background:transparent;
+  color:var(--muted);font-size:.875rem;font-weight:600;letter-spacing:.005em;cursor:pointer;
+  transition:color .25s ease,transform .2s var(--out);
+}
+.seg button:active{transform:scale(.96)}
+.seg button .ic{color:currentColor}
+.seg button[aria-pressed="true"]{color:var(--on-accent)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (hover:hover){.seg button:not([aria-pressed="true"]):hover{color:var(--ink)}}
+
+/* ---------- Fields ---------- */
+.field{margin-top:18px}
+.field.rise{animation:rise .3s var(--out) backwards}
+.field.out{animation:fieldOut .12s ease-in forwards}
+@keyframes fieldOut{to{opacity:0}}
+label{display:block;font-size:.8125rem;line-height:1.3;font-weight:600;letter-spacing:.005em;margin-bottom:8px}
+.box{
+  display:flex;align-items:center;overflow:hidden;
+  background:var(--field);border:1px solid var(--line);border-radius:14px;
+  transition:border-color .2s ease,box-shadow .2s ease;
+}
+@media (hover:hover){.box:hover{border-color:var(--ring)}}
+.box:focus-within{border-color:var(--accent);box-shadow:0 0 0 4px var(--ring)}
+.box input{
+  flex:1;min-width:0;width:100%;padding:14px;border:0;outline:0;background:transparent;caret-color:var(--accent);
+  color:var(--ink);font-family:inherit;font-size:1.375rem;line-height:1.3;font-weight:600;letter-spacing:-.01em;
+  font-variant-numeric:tabular-nums lining-nums;
+  -moz-appearance:textfield;appearance:textfield;
+}
+.box input::-webkit-outer-spin-button,.box input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.box input::placeholder{color:var(--muted);opacity:.5;font-weight:500;letter-spacing:0}
+.box .pre{padding-left:14px;color:var(--muted);font-size:1.125rem;font-weight:600}
+.box .pre + input{padding-left:8px}
+.box .suf{padding-right:14px;color:var(--muted);font-size:.8125rem;font-weight:600;letter-spacing:.01em}
+.hint{min-height:1.3em;margin-top:6px;color:var(--muted);font-size:.78rem;line-height:1.3;font-variant-numeric:tabular-nums lining-nums}
+.err{min-height:1.3em;margin-top:8px;color:var(--fee);font-size:.84rem;line-height:1.3;font-weight:600}
+.err:not(:empty){animation:errIn .25s var(--out)}
+@keyframes errIn{from{opacity:0;transform:translate3d(0,-4px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+
+/* ---------- Divider ---------- */
+.perf{height:0;margin:6px 0 14px;border-top:1px dashed var(--line)}
+
+/* ---------- Breakdown ---------- */
+.ledger{margin:0;padding:0;list-style:none}
+.step{
+  position:relative;display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  padding:9px 0 9px 22px;font-size:.9rem;line-height:1.4;opacity:.5;
+  transition:opacity .3s ease;
+}
+.step::after{content:"";position:absolute;left:3px;top:0;bottom:0;width:1px;background:var(--line)}
+.step:first-child::after{top:50%}
+.step:last-child::after{bottom:50%}
+.step .dot{
+  position:absolute;z-index:1;left:0;top:calc(50% - 3.5px);width:7px;height:7px;border-radius:50%;
+  background:var(--muted);transition:background .3s ease;
+}
+.step .k{color:var(--muted);font-weight:500}
+.step .v{font-weight:600;text-align:right;font-variant-numeric:tabular-nums lining-nums}
+.step.fee .dot{background:var(--fee)}
+.step.fee .v{color:var(--fee)}
+.ledger.live .step{opacity:1;animation:rise .4s var(--out) backwards}
+.ledger.live .step:nth-child(2){animation-delay:.05s}
+.ledger.live .step:nth-child(3){animation-delay:.1s}
+
+/* ---------- Result ---------- */
+.total{
+  position:relative;overflow:hidden;margin-top:12px;padding:16px 18px;border-radius:18px;
+  background:var(--accent);color:var(--on-accent);
+  box-shadow:0 14px 30px -14px var(--ring),inset 0 1px 0 var(--on-hi);
+  contain:layout paint;
+}
+.total::after{
+  content:"";position:absolute;inset:0;pointer-events:none;transform:translateX(-130%);
+  background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.38) 50%,transparent 70%);
+}
+.total.pulse::after{animation:sweep .7s var(--out) .05s}
+@keyframes sweep{to{transform:translateX(130%)}}
+.total .tl{display:block;margin-bottom:6px;font-size:.8125rem;line-height:1.3;font-weight:600;letter-spacing:.01em;opacity:.85}
+.total strong{
+  display:block;font-size:clamp(2rem,10vw,2.7rem);line-height:1.08;font-weight:700;letter-spacing:-.035em;
+  font-variant-numeric:tabular-nums lining-nums;overflow-wrap:anywhere;transition:opacity .3s ease;
+}
+.total .cur{margin-right:.18em;font-size:.62em;font-weight:700;letter-spacing:0;opacity:.85}
+.total .cur:empty{display:none}
+.total.empty strong{opacity:.45}
+@keyframes rise{from{opacity:0;transform:translate3d(0,8px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
 </style>
 </head>
 <body>
-<div class="card">
+<div class="bg" aria-hidden="true"><div class="orb o1"></div><div class="orb o2"></div></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="arrow" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<div class="stage" id="stage">
+<div class="fit" id="fit"><div class="tilt" id="tilt">
+<main class="card" id="card">
   <h1>Withdraw Rate Calculator</h1>
-  <p class="sub">Point &harr; Dollar &harr; BDT (1.5% deduction)</p>
+  <p class="route" aria-label="Point to Dollar to BDT, 1.5 percent deduction">
+    <span>Point</span>
+    <svg class="ic" aria-hidden="true"><use href="#arrow"/></svg>
+    <span>Dollar</span>
+    <svg class="ic" aria-hidden="true"><use href="#arrow"/></svg>
+    <span>BDT</span>
+    <span class="chip">1.5% deduction</span>
+  </p>
 
-  <div class="tabs">
-    <button class="tab active" id="tabF" type="button">WPA &rarr; BDT</button>
-    <button class="tab" id="tabR" type="button">BDT &rarr; WPA</button>
+  <div class="seg" id="seg" data-mode="fwd">
+    <button type="button" id="tabF" aria-pressed="true">
+      <span>WPA</span>
+      <svg class="ic" aria-hidden="true"><use href="#arrow"/></svg>
+      <span>BDT</span>
+    </button>
+    <button type="button" id="tabR" aria-pressed="false">
+      <span>BDT</span>
+      <svg class="ic" aria-hidden="true"><use href="#arrow"/></svg>
+      <span>WPA</span>
+    </button>
   </div>
 
-  <div id="fwd">
+  <div class="field" id="fwd">
     <label for="wpa">Withdraw Point Amount (WPA)</label>
-    <input id="wpa" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 100000">
+    <div class="box">
+      <input id="wpa" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 100000" autocomplete="off">
+      <span class="suf">Point</span>
+    </div>
+    <div class="hint" id="hF"></div>
   </div>
-  <div id="rev" class="hidden">
+
+  <div class="field hidden" id="rev">
     <label for="bdtIn">Taka Amount (BDT)</label>
-    <input id="bdtIn" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 1230">
+    <div class="box">
+      <span class="pre">&#2547;</span>
+      <input id="bdtIn" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 1230" autocomplete="off">
+    </div>
+    <div class="hint" id="hR"></div>
   </div>
 
-  <label for="rate">Dollar Rate (BDT)</label>
-  <input id="rate" type="number" inputmode="decimal" min="0" step="any" value="125">
-
-  <button class="go" id="calc" type="button">Calculate</button>
-  <div class="err" id="err"></div>
-
-  <div class="result" id="result">
-    <div id="resF">
-      <div class="row"><span>Deducted points (1.5%)</span><span id="dPts"></span></div>
-      <div class="row"><span>Points after deduction</span><span id="after"></span></div>
-      <div class="big usd"><small>Dollar (USD)</small><strong id="usd"></strong></div>
-      <div class="big bdt"><small>Final amount (BDT)</small><strong id="bdt"></strong></div>
+  <div class="field" style="margin-top:6px">
+    <label for="rate">Dollar Rate (BDT)</label>
+    <div class="box">
+      <span class="pre">&#2547;</span>
+      <input id="rate" type="number" inputmode="decimal" min="0" step="any" value="125" autocomplete="off">
     </div>
-    <div id="resR" class="hidden">
-      <div class="row"><span>Dollar (USD)</span><span id="rUsd"></span></div>
-      <div class="row"><span>Points after deduction</span><span id="rAfter"></span></div>
-      <div class="row"><span>Deducted points (1.5%)</span><span id="rDed"></span></div>
-      <div class="big wpa"><small>Withdraw Point Amount (WPA)</small><strong id="rWpa"></strong></div>
-    </div>
+    <div class="err" id="err" role="alert"></div>
   </div>
+
+  <div class="perf" aria-hidden="true"></div>
+
+  <ul class="ledger" id="ledger">
+    <li class="step"><i class="dot"></i><span class="k" id="k0"></span><span class="v" id="v0">&mdash;</span></li>
+    <li class="step"><i class="dot"></i><span class="k" id="k1"></span><span class="v" id="v1">&mdash;</span></li>
+    <li class="step"><i class="dot"></i><span class="k" id="k2"></span><span class="v" id="v2">&mdash;</span></li>
+  </ul>
+
+  <div class="total empty" id="total" aria-live="off">
+    <span class="tl" id="tl"></span>
+    <strong id="tVal"><span class="cur" id="tCur"></span><span id="tNum">&mdash;</span></strong>
+  </div>
+</main>
+</div></div>
 </div>
 
 <script>
 (function(){
   var $ = function(id){ return document.getElementById(id); };
   var FEE = 0.015;
+  var mode = 'fwd';
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Zoom ar text selection block
+  /* ===== Scroll totally off + zoom/selection block ===== */
   ['gesturestart','gesturechange','gestureend'].forEach(function(ev){
     document.addEventListener(ev, function(e){ e.preventDefault(); });
   });
   document.addEventListener('touchmove', function(e){
-    if (e.touches && e.touches.length > 1) e.preventDefault();
+    var t = e.target && e.target.nodeName;
+    if ((e.touches && e.touches.length > 1) || t !== 'INPUT') e.preventDefault();
   }, {passive:false});
-  document.addEventListener('wheel', function(e){
-    if (e.ctrlKey) e.preventDefault();
-  }, {passive:false});
+  document.addEventListener('wheel', function(e){ e.preventDefault(); }, {passive:false});
   document.addEventListener('keydown', function(e){
     if ((e.ctrlKey || e.metaKey) && ['+','-','=','0'].indexOf(e.key) !== -1) e.preventDefault();
+    var t = e.target && e.target.nodeName;
+    if (t !== 'INPUT' && t !== 'BUTTON' &&
+        [' ','ArrowUp','ArrowDown','PageUp','PageDown','Home','End'].indexOf(e.key) !== -1) e.preventDefault();
   });
   document.addEventListener('selectstart', function(e){
     var t = e.target && e.target.nodeName;
     if (t !== 'INPUT') e.preventDefault();
   });
   document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
-  var mode = 'fwd';
+  window.addEventListener('scroll', function(){ window.scrollTo(0, 0); });
+  document.addEventListener('focusin', function(){
+    [50, 300].forEach(function(ms){ setTimeout(function(){ window.scrollTo(0, 0); }, ms); });
+  });
 
+  /* ===== Always centred + always fits (scales down instead of scrolling) ===== */
+  var stage = $('stage'), fitEl = $('fit'), card = $('card');
+  var lastScale = 1, fitQueued = false;
+
+  function fitNow(){
+    fitQueued = false;
+    var cs = getComputedStyle(stage);
+    var availH = stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    var h = card.offsetHeight || 1;
+    var s = Math.max(.45, Math.min(1, availH / h));
+    s = Math.round(s * 1000) / 1000;
+    if (s === lastScale) return;
+    lastScale = s;
+    fitEl.style.transform = s < 1 ? 'scale(' + s + ')' : 'none';
+  }
+  function fit(){
+    if (fitQueued) return;
+    fitQueued = true;
+    requestAnimationFrame(fitNow);
+  }
+  function viewport(){
+    var vv = window.visualViewport;
+    if (vv){
+      stage.style.height = vv.height + 'px';
+      stage.style.top = vv.offsetTop + 'px';
+    }
+    fit();
+  }
+  window.addEventListener('resize', viewport);
+  window.addEventListener('orientationchange', function(){ setTimeout(viewport, 200); });
+  if (window.visualViewport){
+    window.visualViewport.addEventListener('resize', viewport);
+    window.visualViewport.addEventListener('scroll', function(){ window.scrollTo(0, 0); viewport(); });
+  }
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(card);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+
+  /* ===== Calculator ===== */
+  var wpaEl = $('wpa'), bdtEl = $('bdtIn'), rateEl = $('rate');
+  var errEl = $('err'), totalEl = $('total'), ledgerEl = $('ledger');
+  var curEl = $('tCur'), numEl = $('tNum');
+  var vEls = [$('v0'), $('v1'), $('v2')];
+  var wasOk = false, swapTimer = 0;
+
+  var LABELS = {
+    fwd:{k:['Deducted points (1.5%)','Points after deduction','Dollar (USD)'], fee:0, total:'Final amount (BDT)'},
+    rev:{k:['Dollar (USD)','Points after deduction','Deducted points (1.5%)'], fee:2, total:'Withdraw Point Amount (WPA)'}
+  };
+
+  // Remember the last dollar rate
+  try {
+    var saved = parseFloat(localStorage.getItem('wr_rate'));
+    if (saved > 0) rateEl.value = saved;
+  } catch(e){}
+
+  // Cached formatters (toLocaleString per frame is slow)
+  var NF = {};
   function fmt(n, d){
-    return n.toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
+    var f = NF[d] || (NF[d] = new Intl.NumberFormat('en-US', {minimumFractionDigits:d, maximumFractionDigits:d}));
+    return f.format(n);
+  }
+  var F2   = function(x){ return fmt(x, 2); };
+  var Fneg = function(x){ return '−' + fmt(x, 2); };
+  var Fpos = function(x){ return '+' + fmt(x, 2); };
+  var Fusd = function(x){ return '$' + fmt(x, 2); };
+  var F0   = function(x){ return fmt(Math.round(x), 0); };
+
+  function write(el, s){
+    if (el._s !== s){ el._s = s; el.textContent = s; }
+  }
+
+  function applyLabels(){
+    var L = LABELS[mode], steps = document.querySelectorAll('.step');
+    for (var i = 0; i < 3; i++){
+      $('k' + i).textContent = L.k[i];
+      steps[i].classList.toggle('fee', i === L.fee);
+    }
+    $('tl').textContent = L.total;
+  }
+
+  /* Short ease-out count (retargets from where it is); writes DOM only when text changes */
+  function tween(el, to, f, dur){
+    cancelAnimationFrame(el._raf);
+    if (to === null){ write(el, '—'); el._v = null; return; }
+    var from = el._v == null ? 0 : el._v;
+    if (reduce || from === to){ el._v = to; write(el, f(to)); return; }
+    var t0 = performance.now(); dur = dur || 400;
+    (function step(t){
+      var p = Math.min(1, (t - t0) / dur);
+      var e = 1 - Math.pow(1 - p, 3);
+      el._v = p === 1 ? to : from + (to - from) * e;
+      write(el, f(el._v));
+      if (p < 1) el._raf = requestAnimationFrame(step);
+    })(t0);
+  }
+  function resetNums(){
+    vEls.concat([numEl]).forEach(function(el){ cancelAnimationFrame(el._raf); el._v = null; });
+  }
+  function setNums(items){
+    for (var i = 0; i < 3; i++) tween(vEls[i], items[i][0], items[i][1], 350);
+  }
+  function showHero(n, prefix){
+    if (n === null){ curEl.textContent = ''; tween(numEl, null); return; }
+    if (curEl.textContent !== prefix) curEl.textContent = prefix;
+    tween(numEl, n, F0, 400);
+  }
+
+  function clearOut(){
+    vEls.forEach(function(el){ tween(el, null); });
+    showHero(null);
+    totalEl.classList.add('empty');
+    ledgerEl.classList.remove('live');
+    wasOk = false;
+  }
+
+  function reveal(){
+    if (wasOk) return;
+    wasOk = true;
+    ledgerEl.classList.remove('live');
+    void ledgerEl.offsetWidth; // restart stagger
+    ledgerEl.classList.add('live');
+    totalEl.classList.remove('pulse');
+    void totalEl.offsetWidth;
+    totalEl.classList.add('pulse');
+  }
+
+  function render(){
+    var rate = parseFloat(rateEl.value);
+    var inEl = mode === 'fwd' ? wpaEl : bdtEl;
+    var raw = inEl.value, v = parseFloat(raw);
+    var msg = '', ok = false, hint = '';
+
+    if (isNaN(rate) || rate <= 0){
+      msg = 'Valid dollar rate din.';
+    } else if (raw !== '' && (isNaN(v) || v <= 0)){
+      msg = mode === 'fwd' ? 'Valid WPA din.' : 'Valid taka amount din.';
+    } else if (raw !== ''){
+      ok = true;
+    }
+    if (errEl.textContent !== msg) errEl.textContent = msg;
+
+    if (raw !== '' && v > 0){
+      hint = fmt(v, v % 1 === 0 ? 0 : 2) + (mode === 'fwd' ? ' points' : ' taka');
+    }
+    var hEl = mode === 'fwd' ? $('hF') : $('hR');
+    if (hEl.textContent !== hint) hEl.textContent = hint;
+
+    if (!ok){ clearOut(); return; }
+
+    if (mode === 'fwd'){
+      var ded = v * FEE, aft = v - ded, usd = aft / 10000, bdt = Math.round(usd * rate);
+      setNums([[ded, Fneg], [aft, F2], [usd, Fusd]]);
+      showHero(bdt, '৳');
+    } else {
+      var usdR = v / rate, aftR = usdR * 10000, wpaR = aftR / (1 - FEE), dedR = wpaR - aftR;
+      setNums([[usdR, Fusd], [aftR, F2], [dedR, Fpos]]);
+      showHero(Math.round(wpaR), '');
+    }
+    totalEl.classList.remove('empty');
+    reveal();
   }
 
   function setMode(m){
+    if (m === mode) return;
     mode = m;
-    $('tabF').classList.toggle('active', m === 'fwd');
-    $('tabR').classList.toggle('active', m === 'rev');
-    $('fwd').classList.toggle('hidden', m !== 'fwd');
-    $('rev').classList.toggle('hidden', m !== 'rev');
-    $('result').style.display = 'none';
-    $('err').textContent = '';
-  }
+    $('seg').setAttribute('data-mode', m);
+    $('tabF').setAttribute('aria-pressed', String(m === 'fwd'));
+    $('tabR').setAttribute('aria-pressed', String(m === 'rev'));
 
-  function calculate(){
-    var rate = parseFloat($('rate').value);
-    var err = $('err'), res = $('result');
-    err.textContent = '';
+    var show = $(m === 'fwd' ? 'fwd' : 'rev'), hide = $(m === 'fwd' ? 'rev' : 'fwd');
+    clearTimeout(swapTimer);
+    show.classList.remove('out');
+    hide.classList.remove('rise');
+    var swap = function(){
+      hide.classList.add('hidden'); hide.classList.remove('out');
+      show.classList.remove('hidden', 'rise');
+      void show.offsetWidth;
+      show.classList.add('rise');
+    };
+    if (reduce || hide.classList.contains('hidden')) swap();
+    else { hide.classList.add('out'); swapTimer = setTimeout(swap, 110); }
 
-    if (isNaN(rate) || rate <= 0){
-      res.style.display = 'none';
-      err.textContent = 'Valid dollar rate din.';
-      return;
-    }
-
-    if (mode === 'fwd'){
-      var wpa = parseFloat($('wpa').value);
-      if (isNaN(wpa) || wpa <= 0){
-        res.style.display = 'none';
-        err.textContent = 'Valid WPA din.';
-        return;
-      }
-      var deducted = wpa * FEE;
-      var afterDeduct = wpa - deducted;
-      var usd = afterDeduct / 10000;
-      var bdt = usd * rate;
-
-      $('dPts').textContent = fmt(deducted, 2);
-      $('after').textContent = fmt(afterDeduct, 2);
-      $('usd').textContent = '$' + fmt(usd, 2);
-      $('bdt').textContent = fmt(Math.round(bdt), 0) + ' \u09F3';
-      $('resF').classList.remove('hidden');
-      $('resR').classList.add('hidden');
-    } else {
-      var tk = parseFloat($('bdtIn').value);
-      if (isNaN(tk) || tk <= 0){
-        res.style.display = 'none';
-        err.textContent = 'Valid taka amount din.';
-        return;
-      }
-      var usdR = tk / rate;
-      var afterR = usdR * 10000;
-      var wpaR = afterR / (1 - FEE);
-      var dedR = wpaR - afterR;
-
-      $('rUsd').textContent = '$' + fmt(usdR, 2);
-      $('rAfter').textContent = fmt(afterR, 2);
-      $('rDed').textContent = fmt(dedR, 2);
-      $('rWpa').textContent = fmt(Math.round(wpaR), 0);
-      $('resR').classList.remove('hidden');
-      $('resF').classList.add('hidden');
-    }
-    res.style.display = 'block';
+    applyLabels();
+    resetNums(); wasOk = false;
+    render();
   }
 
   $('tabF').addEventListener('click', function(){ setMode('fwd'); });
   $('tabR').addEventListener('click', function(){ setMode('rev'); });
-  $('calc').addEventListener('click', calculate);
-  ['wpa','bdtIn','rate'].forEach(function(id){
-    $(id).addEventListener('keydown', function(e){ if (e.key === 'Enter') calculate(); });
+
+  [wpaEl, bdtEl, rateEl].forEach(function(el){
+    el.addEventListener('input', function(){
+      if (el === rateEl){
+        var r = parseFloat(rateEl.value);
+        if (r > 0){ try { localStorage.setItem('wr_rate', String(r)); } catch(e){} }
+      }
+      render();
+    });
+    el.addEventListener('keydown', function(e){
+      if (e.key === 'Enter') el.blur(); // close keyboard
+    });
   });
+
+  applyLabels();
+  render();
+  viewport();
 })();
 </script>
 </body>
