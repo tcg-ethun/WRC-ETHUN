@@ -110,17 +110,17 @@ h1{
 /* ---------- Direction switch ---------- */
 .seg{
   position:relative;display:grid;grid-template-columns:1fr 1fr;padding:4px;margin:20px 0 2px;
-  background:var(--field);border:1px solid var(--line);border-radius:16px;
+  background:var(--field);border:1px solid var(--line);border-radius:999px;
 }
 .seg::before{
   content:"";position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);
-  background:var(--accent);border-radius:12px;box-shadow:0 6px 18px -6px var(--ring);
+  background:var(--accent);border-radius:999px;box-shadow:0 6px 18px -6px var(--ring);
   transition:transform .35s var(--out);will-change:transform;
 }
 .seg[data-mode="rev"]::before{transform:translate3d(100%,0,0)}
 .seg button{
   position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:8px;
-  padding:11px 8px;border:0;border-radius:12px;background:transparent;
+  padding:11px 8px;border:0;border-radius:999px;background:transparent;
   color:var(--muted);font-size:.875rem;font-weight:600;letter-spacing:.005em;cursor:pointer;
   transition:color .25s ease,transform .2s var(--out);
 }
